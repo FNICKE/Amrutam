@@ -55,6 +55,16 @@ app.use(rateLimit({
   },
 }));
 
+// ── Root endpoint ────────────────────────────────────────
+app.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Welcome to Amrutam Telemedicine API',
+    docs: '/api/v1',
+    health: '/health'
+  });
+});
+
 // ── Health check ───────────────────────────────────────
 app.get('/health', (req, res) => {
   res.json({
