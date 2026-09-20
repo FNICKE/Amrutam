@@ -1,4 +1,6 @@
 FROM node:20-alpine AS base
+# Install openssl and libc6-compat required by Prisma engines on Alpine
+RUN apk add --no-cache openssl libc6-compat
 WORKDIR /app
 
 # Install deps only (layer cached unless package*.json changes)
