@@ -11,6 +11,7 @@ FROM base AS runner
 ENV NODE_ENV=production
 
 COPY --from=deps /app/node_modules ./node_modules
+COPY package*.json ./
 COPY prisma ./prisma
 COPY src ./src
 COPY server.js ./
