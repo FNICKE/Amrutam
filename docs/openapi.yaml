@@ -1,0 +1,247 @@
+openapi: 3.0.3
+info:
+  title: Amrutam Telemedicine API
+  version: 1.0.0
+servers:
+  - url: http://localhost:5000/api/v1
+security:
+  - bearerAuth: []
+paths:
+  /auth/register:
+    post:
+      security: []
+      summary: Register a patient or doctor user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User registered
+  /auth/login:
+    post:
+      security: []
+      summary: Login and receive tokens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authenticated
+  /auth/refresh:
+    post:
+      security: []
+      summary: Rotate refresh token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: New token pair
+  /auth/me:
+    get:
+      summary: Current user
+      responses:
+        '200':
+          description: Current user profile
+  /doctors:
+    get:
+      security: []
+      summary: List verified doctors
+      parameters:
+        - in: query
+          name: specialization
+          schema: { type: string }
+        - in: query
+          name: minFee
+          schema: { type: number }
+        - in: query
+          name: maxFee
+          schema: { type: number }
+        - in: query
+          name: minRating
+          schema: { type: number }
+        - in: query
+          name: language
+          schema: { type: string }
+      responses:
+        '200':
+          description: Doctor list
+    post:
+      summary: Create doctor profile
+      responses:
+        '201':
+          description: Doctor profile created
+  /doctors/{id}/slots:
+    get:
+      security: []
+      summary: Get available slots for a doctor
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - in: query
+          name: date
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: Available slots
+    post:
+      summary: Create availability slots
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '201':
+          description: Slots created
+  /bookings:
+    post:
+      summary: Create idempotent booking
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          schema: { type: string }
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBookingRequest'
+      responses:
+        '201':
+          description: Booking created
+        '409':
+          description: Slot unavailable or duplicate conflict
+  /bookings/me:
+    get:
+      summary: List my bookings
+      responses:
+        '200':
+          description: Booking list
+  /bookings/{id}:
+    delete:
+      summary: Cancel a booking
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Booking cancelled
+  /consultations:
+    get:
+      summary: List consultations for admin or doctor
+      responses:
+        '200':
+          description: Consultation list
+  /consultations/{id}/start:
+    post:
+      summary: Start consultation
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Started
+  /consultations/{id}/end:
+    post:
+      summary: End consultation
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Completed
+  /prescriptions:
+    post:
+      summary: Create prescription
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePrescriptionRequest'
+      responses:
+        '201':
+          description: Prescription created
+  /search/doctors:
+    get:
+      security: []
+      summary: Search doctors
+      responses:
+        '200':
+          description: Search results
+  /admin/dashboard:
+    get:
+      summary: Admin dashboard metrics
+      responses:
+        '200':
+          description: Dashboard metrics
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    Id:
+      in: path
+      name: id
+      required: true
+      schema:
+        type: string
+        format: uuid
+  schemas:
+    RegisterRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, minLength: 8 }
+        firstName: { type: string }
+        lastName: { type: string }
+        role:
+          type: string
+          enum: [PATIENT, DOCTOR]
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
+    RefreshRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken: { type: string }
+    CreateBookingRequest:
+      type: object
+      required: [slotId]
+      properties:
+        slotId: { type: string, format: uuid }
+        type:
+          type: string
+          enum: [VIDEO, AUDIO, CHAT]
+        chiefComplaint:
+          type: string
+          maxLength: 500
+    CreatePrescriptionRequest:
+      type: object
+      required: [consultationId, medicines, diagnosis]
+      properties:
+        consultationId: { type: string, format: uuid }
+        diagnosis: { type: string }
+        notes: { type: string }
+        medicines:
+          type: array
+          items:
+            type: object
+            required: [name, dosage, frequency, duration]
+            properties:
+              name: { type: string }
+              dosage: { type: string }
+              frequency: { type: string }
+              duration: { type: string }
+              notes: { type: string }

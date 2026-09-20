@@ -1,0 +1,69 @@
+version: '3.9'
+
+services:
+  # ── PostgreSQL ──────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: amrutam_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       amrutam_db
+      POSTGRES_USER:     postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis ───────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: amrutam_redis
+    restart: unless-stopped
+    command: redis-server --save 20 1 --loglevel warning
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── API ─────────────────────────────────────────────
+  api:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: amrutam_api
+    restart: unless-stopped
+    ports:
+      - '5000:5000'
+    environment:
+      NODE_ENV:             development
+      PORT:                 5000
+      DATABASE_URL:         postgresql://postgres:password@postgres:5432/amrutam_db
+      REDIS_URL:            redis://redis:6379
+      JWT_SECRET:           dev_jwt_secret_change_in_prod
+      JWT_REFRESH_SECRET:   dev_refresh_secret_change_in_prod
+      JWT_EXPIRES_IN:       15m
+      JWT_REFRESH_EXPIRES_IN: 7d
+      BCRYPT_ROUNDS:        10
+      LOG_LEVEL:            info
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ../logs:/app/logs
+
+volumes:
+  postgres_data:
+  redis_data:
